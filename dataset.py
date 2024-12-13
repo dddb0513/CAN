@@ -2,60 +2,125 @@ import torch
 import time
 import pickle as pkl
 from torch.utils.data import DataLoader, Dataset, RandomSampler
+import numpy as np
 
 
-class HMERDataset(Dataset):
-    def __init__(self, params, image_path, label_path, words, is_train=True):
-        super(HMERDataset, self).__init__()
-        if image_path.endswith('.pkl'):
-            with open(image_path, 'rb') as f:
-                self.images = pkl.load(f)
-        elif image_path.endswith('.list'):
-            with open(image_path, 'r') as f:
-                lines = f.readlines()
-            self.images = {}
-            print(f'data files: {lines}')
-            for line in lines:
-                name = line.strip()
-                print(f'loading data file: {name}')
-                start = time.time()
-                with open(name, 'rb') as f:
-                    images = pkl.load(f)
-                self.images.update(images)
-                print(f'loading {name} cost: {time.time() - start:.2f} seconds!')
+# class HMERDataset(Dataset):
+#     def __init__(self, params, image_path, label_path, words, is_train=True):
+#         super(HMERDataset, self).__init__()
+#         if image_path.endswith('.pkl'):
+#             with open(image_path, 'rb') as f:
+#                 self.images = pkl.load(f)
+#         elif image_path.endswith('.list'):
+#             with open(image_path, 'r') as f:
+#                 lines = f.readlines()
+#             self.images = {}
+#             print(f'data files: {lines}')
+#             for line in lines:
+#                 name = line.strip()
+#                 print(f'loading data file: {name}')
+#                 start = time.time()
+#                 with open(name, 'rb') as f:
+#                     images = pkl.load(f)
+#                 self.images.update(images)
+#                 print(f'loading {name} cost: {time.time() - start:.2f} seconds!')
 
-        with open(label_path, 'r') as f:
-            self.labels = f.readlines()
+#         with open(label_path, 'r') as f:
+#             self.labels = f.readlines()
 
+#         self.words = words
+#         self.is_train = is_train
+#         self.params = params
+
+#     def __len__(self):
+#         assert len(self.images) == len(self.labels)
+#         return len(self.labels)
+
+#     def __getitem__(self, idx):
+#         name, *labels = self.labels[idx].strip().split()
+#         name = name.split('.')[0] if name.endswith('jpg') else name
+#         image = self.images[name]
+#         image = torch.Tensor(255-image) / 255
+#         image = image.unsqueeze(0)
+#         labels.append('eos')
+#         words = self.words.encode(labels)
+#         words = torch.LongTensor(words)
+#         return image, words
+
+class MyDataset(Dataset):
+    def __init__(self, params, file_paths, words, is_train=True):
+        super(MyDataset, self).__init__()
+        
+        # 文件是一个 .npl 格式，包含字典列表
+        # 例如，你可以使用 np.load 来读取这些文件
+        # 如果文件是一个 pickle 格式，你可以使用 pkl.load
+        # with open(file_path, 'rb') as f:
+        #     self.data = np.load(f, allow_pickle=True)
+        # 初始化时接收多个文件路径，并将它们的数据合并
+        self.data = []
+        for file_path in file_paths:
+            with open(file_path, 'rb') as f:
+                data = np.load(f, allow_pickle=True)
+                self.data.extend(data)  # 将每个文件的数据添加到列表中
+        
         self.words = words
         self.is_train = is_train
         self.params = params
 
     def __len__(self):
-        assert len(self.images) == len(self.labels)
-        return len(self.labels)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        name, *labels = self.labels[idx].strip().split()
-        name = name.split('.')[0] if name.endswith('jpg') else name
-        image = self.images[name]
-        image = torch.Tensor(255-image) / 255
-        image = image.unsqueeze(0)
-        labels.append('eos')
-        words = self.words.encode(labels)
-        words = torch.LongTensor(words)
-        return image, words
+        # 获取图像和标签
+        item = self.data[idx]
+        image = item['image']
+        labels = item['label'].split()  # 假设标签是一个字符串，可能是多个单词，需要分割
+        
+        # 处理图像
+        image = torch.Tensor(255 - image) / 255  # 归一化到 [0, 1]
+        image = image.permute(2, 0, 1)  # 转换为 (C, H, W) 格式
+        
+        # 将标签编码为对应的数字索引（假设 Words 类有编码方法）
+        labels.append('eos')  # 添加结束标记
+        word_indices = self.words.encode(labels)  # 使用你的编码方式
+        word_indices = torch.LongTensor(word_indices)
 
+        return image, word_indices
+
+
+# def get_crohme_dataset(params):
+#     words = Words(params['word_path'])
+#     params['word_num'] = len(words)
+#     print(f"训练数据路径 images: {params['train_image_path']} labels: {params['train_label_path']}")
+#     print(f"验证数据路径 images: {params['eval_image_path']} labels: {params['eval_label_path']}")
+
+#     train_dataset = HMERDataset(params, params['train_image_path'], params['train_label_path'], words, is_train=True)
+#     eval_dataset = HMERDataset(params, params['eval_image_path'], params['eval_label_path'], words, is_train=False)
+
+#     train_sampler = RandomSampler(train_dataset)
+#     eval_sampler = RandomSampler(eval_dataset)
+
+#     train_loader = DataLoader(train_dataset, batch_size=params['batch_size'], sampler=train_sampler,
+#                               num_workers=params['workers'], collate_fn=collate_fn_dict[params['collate_fn']], pin_memory=True)
+#     eval_loader = DataLoader(eval_dataset, batch_size=1, sampler=eval_sampler,
+#                               num_workers=params['workers'], collate_fn=collate_fn_dict[params['collate_fn']], pin_memory=True)
+
+#     print(f'train dataset: {len(train_dataset)} train steps: {len(train_loader)} '
+#           f'eval dataset: {len(eval_dataset)} eval steps: {len(eval_loader)} ')
+#     return train_loader, eval_loader
 
 def get_crohme_dataset(params):
     words = Words(params['word_path'])
     params['word_num'] = len(words)
-    print(f"训练数据路径 images: {params['train_image_path']} labels: {params['train_label_path']}")
-    print(f"验证数据路径 images: {params['eval_image_path']} labels: {params['eval_label_path']}")
+    
+    print(f"训练数据路径 : {params['train_file_path']} ")
+    print(f"验证数据路径 : {params['eval_file_path']} ")
 
-    train_dataset = HMERDataset(params, params['train_image_path'], params['train_label_path'], words, is_train=True)
-    eval_dataset = HMERDataset(params, params['eval_image_path'], params['eval_label_path'], words, is_train=False)
+    # 使用 MyDataset 类
+    train_dataset = MyDataset(params, params['train_file_path'], words, is_train=True)
+    eval_dataset = MyDataset(params, params['eval_file_path'], words, is_train=False)
 
+    # 创建数据加载器
     train_sampler = RandomSampler(train_dataset)
     eval_sampler = RandomSampler(eval_dataset)
 
@@ -67,7 +132,6 @@ def get_crohme_dataset(params):
     print(f'train dataset: {len(train_dataset)} train steps: {len(train_loader)} '
           f'eval dataset: {len(eval_dataset)} eval steps: {len(eval_loader)} ')
     return train_loader, eval_loader
-
 
 def collate_fn(batch_images):
     max_width, max_height, max_length = 0, 0, 0

@@ -5,7 +5,7 @@ experiment: "CAN"
 seed: 20211024
 
 # 训练参数
-epochs: 240
+epochs: 1
 batch_size: 8
 workers: 0
 train_parts: 1
@@ -30,13 +30,26 @@ gradient_clip: True
 use_label_mask: False
 
 # 训练数据
-train_image_path: 'datasets/CROHME/train_images.pkl'
-train_label_path: 'datasets/CROHME/train_labels.txt'
+# train_image_path: 'datasets/CROHME/train_images.pkl'
+# train_label_path: 'datasets/CROHME/train_labels.txt'
+train_file_path: 
+  - 'datasets/MyDataset/train_files/batch_0.npy'
+  - 'datasets/MyDataset/train_files/batch_1.npy'
+  - 'datasets/MyDataset/train_files/batch_2.npy'
+  - 'datasets/MyDataset/train_files/batch_3.npy'
+  - 'datasets/MyDataset/train_files/batch_4.npy'
+  - 'datasets/MyDataset/train_files/batch_5.npy'
+  - 'datasets/MyDataset/train_files/batch_6.npy'
+  - 'datasets/MyDataset/train_files/batch_7.npy'
+  - 'datasets/MyDataset/train_files/batch_8.npy'
 
-eval_image_path: 'datasets/CROHME/14_test_images.pkl'
-eval_label_path: 'datasets/CROHME/14_test_labels.txt'
-
-word_path: 'datasets/CROHME/words_dict.txt'
+# eval_image_path: 'datasets/CROHME/14_test_images.pkl'
+# eval_label_path: 'datasets/CROHME/14_test_labels.txt'
+eval_file_path: 
+  - 'datasets/MyDataset/eval_files/batch_9.npy'
+  - 'datasets/MyDataset/eval_files/batch_10.npy'
+  
+word_path: 'datasets/MyDataset/vocab.txt'
 
 # collate_fn
 collate_fn: collate_fn
@@ -49,7 +62,7 @@ densenet:
   use_dropout: True
 
 encoder:
-  input_channel: 1
+  input_channel: 3
   out_channel: 684
 
 decoder:
@@ -60,7 +73,7 @@ decoder:
 
 counting_decoder:
   in_channel: 684
-  out_channel: 111
+  out_channel: 415
 
 attention:
   attention_dim: 512

@@ -18,11 +18,14 @@ def load_config(yaml_path):
     if not params['experiment']:
         print('实验名不能为空!')
         exit(-1)
-    if not params['train_image_path']:
-        print('训练图片路径不能为空！')
-        exit(-1)
-    if not params['train_label_path']:
-        print('训练label路径不能为空！')
+    # if not params['train_image_path']:
+    #     print('训练图片路径不能为空！')
+    #     exit(-1)
+    # if not params['train_label_path']:
+    #     print('训练label路径不能为空！')
+    #     exit(-1)
+    if not params['train_file_path']:
+        print('训练文件路径不能为空！')
         exit(-1)
     if not params['word_path']:
         print('word dict路径不能为空！')
